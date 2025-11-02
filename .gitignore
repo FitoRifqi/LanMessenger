@@ -1,0 +1,8 @@
+# Folder hasil build Maven
+target/
+
+# Folder pengaturan VS Code
+.vscode/
+
+# File log
+*.log
