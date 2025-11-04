@@ -153,7 +153,7 @@ public class ChatClient {
             SystemTray tray = SystemTray.getSystemTray();
             
             // PENTING: Pastikan Anda punya file "icon.png" di root proyek
-            Image image = new ImageIcon("icon.png").getImage(); 
+            Image image = new ImageIcon("image/yuta.png").getImage(); 
             
             trayIcon = new TrayIcon(image, "LAN Messenger");
             trayIcon.setImageAutoSize(true);
