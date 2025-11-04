@@ -131,7 +131,7 @@ public class ChatClient {
     private void setupNetworking() {
         try {
             // Pastikan IP server sudah benar
-            Socket sock = new Socket("192.168.18.111", 5000); // Ganti IP ini jika perlu
+            Socket sock = new Socket("192.168.18.62", 5000); // Ganti IP ini jika perlu
             
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
