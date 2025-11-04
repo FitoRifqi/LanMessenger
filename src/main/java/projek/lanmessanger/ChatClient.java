@@ -7,6 +7,12 @@ import java.io.*;
 import java.net.*;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+// 1. Import yang diperlukan untuk 3 fitur baru
+import java.awt.TrayIcon;
+import java.awt.SystemTray;
+import java.awt.Rectangle;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 
 public class ChatClient {
     private JTextArea incomingMessages;
@@ -20,37 +26,36 @@ public class ChatClient {
     
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    // 2. Tambahkan variabel untuk TrayIcon
+    private TrayIcon trayIcon;
+
     // --- Method main ---
     public static void main(String[] args) {
-        // 1. Atur Look and Feel "Nimbus" agar tampilan lebih modern
-        // Ini harus dijalankan sebelum komponen Swing dibuat
         try {
             UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (Exception e) {
             System.out.println("Gagal memuat Look and Feel Nimbus, menggunakan default.");
         }
         
-        // Menjalankan GUI di Event Dispatch Thread (EDT) untuk keamanan thread
         SwingUtilities.invokeLater(() -> new ChatClient().go());
     }
 
     // --- Method Utama ---
     public void go() {
-        // Pisahkan logika untuk merapikan
         promptForUsername();
         initUI();
+        initSystemTray(); // 3. Panggil method untuk inisialisasi tray icon
         setupNetworking();
 
-        // Mulai thread untuk mendengarkan pesan masuk
         Thread readerThread = new Thread(new IncomingReader());
         readerThread.start();
 
-        // Tampilkan frame di akhir
         frame.setVisible(true);
     }
 
     // --- Logika untuk meminta Username ---
     private void promptForUsername() {
+        // (Tidak ada perubahan di sini... sama seperti sebelumnya)
         while (username == null || username.trim().isEmpty()) {
             username = JOptionPane.showInputDialog(
                     null, 
@@ -59,10 +64,10 @@ public class ChatClient {
                     JOptionPane.PLAIN_MESSAGE
             );
 
-            if (username == null) { // User menekan 'Cancel'
+            if (username == null) { 
                 System.exit(0); 
             }
-            if (username.trim().isEmpty()) { // User tidak mengisi nama
+            if (username.trim().isEmpty()) { 
                 JOptionPane.showMessageDialog(
                         null, 
                         "Nama tidak boleh kosong.", 
@@ -78,10 +83,10 @@ public class ChatClient {
         frame = new JFrame("Simple LAN Messenger - (" + username + ")");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        // 2. Gunakan BorderLayout untuk layout yang lebih rapi
-        frame.getContentPane().setLayout(new BorderLayout(5, 5)); // (HGap, VGap)
+        // 4. PERMINTAAN #2: Nonaktifkan Maximize dan Resize
+        frame.setResizable(false);
         
-        // Beri sedikit padding/border di sekitar frame
+        frame.getContentPane().setLayout(new BorderLayout(5, 5)); 
         ((JPanel) frame.getContentPane()).setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         // --- Area Chat (Tengah) ---
@@ -94,16 +99,12 @@ public class ChatClient {
         qScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         
         // --- Panel Input (Bawah) ---
-        // Panel ini akan menampung kotak teks dan panel tombol
-        JPanel southPanel = new JPanel(new BorderLayout(5, 0)); // (HGap, VGap)
-
+        JPanel southPanel = new JPanel(new BorderLayout(5, 0)); 
         outgoingMessage = new JTextField(20);
-        
-        // 3. Tambahkan ActionListener ke text field agar bisa kirim pakai "Enter"
         outgoingMessage.addActionListener(new SendButtonListener());
 
         // --- Panel Tombol (di dalam Panel Input) ---
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0)); // (rows, cols, HGap, VGap)
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0)); 
         JButton sendButton = new JButton("Send");
         sendButton.addActionListener(new SendButtonListener());
         
@@ -113,39 +114,87 @@ public class ChatClient {
         buttonPanel.add(sendButton);
         buttonPanel.add(sendFileButton);
 
-        // Susun panel input
         southPanel.add(outgoingMessage, BorderLayout.CENTER);
         southPanel.add(buttonPanel, BorderLayout.EAST);
 
-        // Tambahkan semua komponen ke frame utama
         frame.getContentPane().add(qScroller, BorderLayout.CENTER);
         frame.getContentPane().add(southPanel, BorderLayout.SOUTH);
 
-        // 4. Gunakan pack() agar ukuran window pas, dan set lokasi di tengah
-        frame.pack(); // Mengganti setSize()
-        frame.setMinimumSize(frame.getSize()); // Mencegah window dikecilkan terlalu kecil
-        frame.setLocationRelativeTo(null); // Membuka window di tengah layar
+        frame.pack(); 
+        frame.setMinimumSize(frame.getSize());
+        
+        // 5. PERMINTAAN #3: Posisi di Kanan Bawah
+        // Ganti 'setLocationRelativeTo(null)' dengan logika ini:
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
+        Rectangle bounds = defaultScreen.getDefaultConfiguration().getBounds();
+        
+        int screenWidth = bounds.width;
+        int screenHeight = bounds.height;
+        int windowWidth = frame.getWidth();
+        int windowHeight = frame.getHeight();
+        
+        // Kalkulasi posisi X dan Y. (40 adalah padding dari taskbar)
+        int x = screenWidth - windowWidth - 10;
+        int y = screenHeight - windowHeight - 40; 
+        
+        frame.setLocation(x, y);
     }
+
+    // 6. METHOD BARU: Inisialisasi System Tray (Pop-up)
+    private void initSystemTray() {
+        // Cek apakah System Tray didukung oleh OS
+        if (!SystemTray.isSupported()) {
+            System.out.println("SystemTray tidak didukung");
+            return;
+        }
+
+        try {
+            SystemTray tray = SystemTray.getSystemTray();
+            
+            // PENTING: Pastikan Anda punya file "icon.png" di root proyek
+            Image image = new ImageIcon("icon.png").getImage(); 
+            
+            trayIcon = new TrayIcon(image, "LAN Messenger");
+            trayIcon.setImageAutoSize(true);
+            trayIcon.setToolTip("LAN Messenger (" + username + ")");
+            
+            tray.add(trayIcon);
+            
+            // Tambahkan aksi jika icon di-klik (misal: membawa window ke depan)
+            trayIcon.addActionListener(e -> {
+                frame.setVisible(true);
+                frame.setState(Frame.NORMAL);
+            });
+
+        } catch (Exception e) {
+            System.out.println("Gagal membuat TrayIcon: " + e.getMessage());
+            trayIcon = null; // Set ke null jika gagal
+        }
+    }
+
+    // 7. METHOD BARU: Helper untuk menampilkan notifikasi
+    private void showNotification(String title, String message) {
+        if (trayIcon != null) {
+            trayIcon.displayMessage(title, message, TrayIcon.MessageType.INFO);
+        }
+    }
+
 
     // --- Logika Koneksi Jaringan ---
     private void setupNetworking() {
+        // (Tidak ada perubahan di sini... sama seperti sebelumnya)
         try {
-            // Pastikan IP server sudah benar
             Socket sock = new Socket("192.168.18.62", 5000); // Ganti IP ini jika perlu
-            
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
-
             System.out.println("Koneksi berhasil dibuat.");
             
-            // Kirim pesan "bergabung" menggunakan protokol baru
-            dataOut.writeInt(1); // Tipe 1: Teks
+            dataOut.writeInt(1); 
             dataOut.writeUTF("--- " + username + " telah bergabung ---");
             dataOut.flush();
-
         } catch (IOException e) {
             e.printStackTrace();
-            // Tampilkan error di EDT
             SwingUtilities.invokeLater(() -> 
                 JOptionPane.showMessageDialog(null, "Gagal terhubung ke server. Pastikan IP dan Port sudah benar.", "Koneksi Gagal", JOptionPane.ERROR_MESSAGE)
             );
@@ -155,6 +204,7 @@ public class ChatClient {
 
     // --- Tombol Kirim Teks ---
     public class SendButtonListener implements ActionListener {
+        // (Tidak ada perubahan di sini... sama seperti sebelumnya)
         public void actionPerformed(ActionEvent ev) {
             String message = outgoingMessage.getText().trim();
             if (message.isEmpty()) {
@@ -175,24 +225,21 @@ public class ChatClient {
 
     // --- Tombol Kirim File ---
     public class SendFileButtonListener implements ActionListener {
+        // (Tidak ada perubahan di sini... sama seperti sebelumnya)
         public void actionPerformed(ActionEvent ev) {
             JFileChooser fileChooser = new JFileChooser();
             int result = fileChooser.showOpenDialog(frame);
 
             if (result == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
-                
-                // Kirim file dalam thread terpisah agar GUI tidak "macet"
                 new Thread(() -> sendFile(selectedFile)).start();
             }
         }
         
         private void sendFile(File selectedFile) {
             try {
-                // Tampilkan notifikasi di chat lokal
                 appendMessage("Mengirim file: " + selectedFile.getName() + "...\n");
                 
-                // Kirim Tipe 2: File
                 dataOut.writeInt(2);
                 dataOut.writeUTF(selectedFile.getName());
                 dataOut.writeLong(selectedFile.length());
@@ -228,6 +275,12 @@ public class ChatClient {
                         String message = dataIn.readUTF();
                         String time = LocalTime.now().format(timeFormatter);
                         appendMessage("[" + time + "] " + message + "\n");
+                        
+                        // 8. PERMINTAAN #1: Tampilkan notifikasi
+                        // Tampilkan hanya jika window tidak sedang aktif/fokus
+                        if (!frame.isFocused()) {
+                            showNotification("Pesan Baru", message);
+                        }
                     
                     } else if (messageType == 2) { // TIPE 2: Menerima File
                         handleIncomingFile();
@@ -241,32 +294,28 @@ public class ChatClient {
             }
         }
         
-        // Memisahkan logika penerimaan file agar lebih rapi
         private void handleIncomingFile() throws IOException {
             String fileName = dataIn.readUTF();
             long fileSize = dataIn.readLong();
             
             String time = LocalTime.now().format(timeFormatter);
-            appendMessage("[" + time + "] Menerima file: " + fileName 
-                            + " (" + (fileSize / 1024) + " KB).\n");
+            String fileInfo = "Menerima file: " + fileName + " (" + (fileSize / 1024) + " KB).\n";
+            appendMessage("[" + time + "] " + fileInfo);
             
-            // 5. Tanya user mau simpan di mana
-            // Ini harus dijalankan di thread Swing (EDT)
+            // 9. PERMINTAAN #1: Tampilkan notifikasi
+            if (!frame.isFocused()) {
+                showNotification("File Baru", fileInfo);
+            }
+            
             JFileChooser saveChooser = new JFileChooser();
-            
-            // --- MODIFIKASI: Arahkan ke folder "Files" ---
             File saveDir = new File("Files");
             if (!saveDir.exists()) {
-                saveDir.mkdir(); // Buat folder "Files" jika belum ada
+                saveDir.mkdir(); 
             }
             saveChooser.setCurrentDirectory(saveDir.getAbsoluteFile());
-            // --- Akhir Modifikasi ---
+            saveChooser.setSelectedFile(new File(fileName)); 
             
-            saveChooser.setSelectedFile(new File(fileName)); // Menyarankan nama file asli
-            
-            // Menggunakan SwingUtilities.invokeAndWait agar kita bisa dapat hasilnya
-            // sebelum melanjutkan membaca stream.
-            final File[] saveFile = new File[1]; // Array 1-elemen untuk menampung hasil
+            final File[] saveFile = new File[1]; 
             try {
                 SwingUtilities.invokeAndWait(() -> {
                     int saveResult = saveChooser.showSaveDialog(frame);
@@ -278,7 +327,7 @@ public class ChatClient {
                 });
             } catch (Exception e) {
                 e.printStackTrace();
-                saveFile[0] = null; // Anggap dibatalkan jika ada error
+                saveFile[0] = null; 
             }
 
             OutputStream fos = null;
@@ -289,12 +338,11 @@ public class ChatClient {
                 appendMessage("Penyimpanan file dibatalkan. Mengabaikan data...\n");
             }
             
-            // Logika membaca file dari stream
             byte[] buffer = new byte[4096];
             int read;
             long remaining = fileSize;
             while (remaining > 0 && (read = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) > 0) {
-                if (fos != null) { // Hanya tulis ke file jika user menekan "Save"
+                if (fos != null) { 
                     fos.write(buffer, 0, read);
                 }
                 remaining -= read;
@@ -309,11 +357,7 @@ public class ChatClient {
         }
     }
     
-    /**
-     * Helper method untuk menambahkan teks ke JTextArea secara thread-safe.
-     * Semua pembaruan GUI Swing harus dipanggil dari Event Dispatch Thread (EDT).
-     * @param message Pesan yang akan ditambahkan ke area chat.
-     */
+    // Helper method (aman untuk thread)
     private void appendMessage(String message) {
         SwingUtilities.invokeLater(() -> {
             incomingMessages.append(message);
