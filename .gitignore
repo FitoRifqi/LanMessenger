@@ -6,3 +6,6 @@ target/
 
 # File log
 *.log
+
+# kiriman data
+/Files
