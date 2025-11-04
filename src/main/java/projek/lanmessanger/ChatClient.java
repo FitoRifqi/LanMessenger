@@ -131,7 +131,7 @@ public class ChatClient {
     private void setupNetworking() {
         try {
             // Pastikan IP server sudah benar
-            Socket sock = new Socket("192.168.18.62", 5000); // Ganti IP ini jika perlu
+            Socket sock = new Socket("192.168.18.111", 5000); // Ganti IP ini jika perlu
             
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
@@ -145,7 +145,10 @@ public class ChatClient {
 
         } catch (IOException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Gagal terhubung ke server. Pastikan IP dan Port sudah benar.", "Koneksi Gagal", JOptionPane.ERROR_MESSAGE);
+            // Tampilkan error di EDT
+            SwingUtilities.invokeLater(() -> 
+                JOptionPane.showMessageDialog(null, "Gagal terhubung ke server. Pastikan IP dan Port sudah benar.", "Koneksi Gagal", JOptionPane.ERROR_MESSAGE)
+            );
             System.exit(1);
         }
     }
@@ -250,6 +253,15 @@ public class ChatClient {
             // 5. Tanya user mau simpan di mana
             // Ini harus dijalankan di thread Swing (EDT)
             JFileChooser saveChooser = new JFileChooser();
+            
+            // --- MODIFIKASI: Arahkan ke folder "Files" ---
+            File saveDir = new File("Files");
+            if (!saveDir.exists()) {
+                saveDir.mkdir(); // Buat folder "Files" jika belum ada
+            }
+            saveChooser.setCurrentDirectory(saveDir.getAbsoluteFile());
+            // --- Akhir Modifikasi ---
+            
             saveChooser.setSelectedFile(new File(fileName)); // Menyarankan nama file asli
             
             // Menggunakan SwingUtilities.invokeAndWait agar kita bisa dapat hasilnya
