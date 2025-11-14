@@ -48,7 +48,10 @@ public class ChatServer {
                 
                 System.out.println("User " + username + " terhubung. Total users: " + clients.size());
                 
-                // Broadcast user list ke semua client
+                // PENTING: Broadcast join message dulu
+                broadcastText("--- " + username + " telah bergabung ---");
+                
+                // Kemudian broadcast user list ke semua client
                 broadcastUserList();
             }
         } catch (IOException e) {
@@ -222,6 +225,11 @@ public class ChatServer {
         clients.remove(username);
         clientHandlers.remove(username);
         System.out.println("User " + username + " terputus. Total users: " + clients.size());
+        
+        // Broadcast leave message
+        broadcastText("--- " + username + " telah keluar ---");
+        
+        // Update user list
         broadcastUserList();
     }
 

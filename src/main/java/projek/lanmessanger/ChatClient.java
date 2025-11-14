@@ -437,7 +437,7 @@ public class ChatClient {
 
     private void setupNetworking() {
         try {
-            Socket sock = new Socket("192.168.18.114", 5000);
+            Socket sock = new Socket("192.168.18.104", 5000);
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
             System.out.println("Koneksi berhasil dibuat.");
@@ -446,10 +446,9 @@ public class ChatClient {
             dataOut.writeUTF(username);
             dataOut.flush();
             
-            // Send join notification
-            dataOut.writeInt(1); 
-            dataOut.writeUTF("--- " + username + " telah bergabung ---");
-            dataOut.flush();
+            // Tunggu response dari server (bisa berupa user list atau error)
+            // Server akan otomatis broadcast join message dan user list
+            
         } catch (IOException e) {
             e.printStackTrace();
             SwingUtilities.invokeLater(() -> 
