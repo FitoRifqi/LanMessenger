@@ -425,7 +425,7 @@ public class ChatClient {
     private void setupNetworking() {
         try {
             // Gunakan IP server yang sesuai
-            Socket sock = new Socket("192.168.18.62", 5000);
+            Socket sock = new Socket("192.168.18.111", 5000);
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
             System.out.println("Koneksi berhasil dibuat.");
