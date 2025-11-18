@@ -64,7 +64,7 @@ public class ChatClient {
     private JFrame frame; 
     
     // --- MODIFIKASI: Variabel untuk IP dan Port ---
-    private String serverIP = "localhost"; 
+    private String serverIP = ""; 
     private int serverPort = 5000;         
     // ----------------------------------------------
 
