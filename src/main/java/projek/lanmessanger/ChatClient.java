@@ -29,7 +29,7 @@ public class ChatClient implements ClientListener {
     // --- Logic Components ---
     private NetworkClient networkClient;
     private String username;
-    private String serverIP = "localhost";
+    private String serverIP = "";
     private int serverPort = 5000;
     
     private HashMap<String, PrivateChatWindow> privateChatWindows = new HashMap<>();
