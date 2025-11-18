@@ -2,7 +2,6 @@ package projek.lanmessanger;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -27,7 +26,6 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
 public class PrivateChatWindow extends JFrame {
-    // Menggunakan JTextPane untuk styling
     private JTextPane chatPane;
     private StyledDocument chatDocument;
     
@@ -54,48 +52,42 @@ public class PrivateChatWindow extends JFrame {
 
     private void initUI() {
         setTitle(originalTitle);
-        setSize(450, 550); // Ukuran sedikit diperbesar
+        setSize(450, 550); 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Layout Utama dengan Padding
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Chat Area (JTextPane)
         chatPane = new JTextPane();
         chatPane.setEditable(false);
         chatDocument = chatPane.getStyledDocument();
         
-        // Definisi Styles
         styleSelf = new SimpleAttributeSet();
         StyleConstants.setBold(styleSelf, true);
-        StyleConstants.setForeground(styleSelf, new Color(0, 102, 204)); // Biru (Anda)
+        StyleConstants.setForeground(styleSelf, new Color(0, 102, 204));
 
         styleTarget = new SimpleAttributeSet();
         StyleConstants.setBold(styleTarget, true);
-        StyleConstants.setForeground(styleTarget, new Color(204, 0, 102)); // Magenta Gelap (Lawan Bicara)
+        StyleConstants.setForeground(styleTarget, new Color(204, 0, 102)); 
 
         styleMessage = new SimpleAttributeSet();
-        StyleConstants.setForeground(styleMessage, new Color(50, 50, 50)); // Hitam lembut
+        StyleConstants.setForeground(styleMessage, new Color(50, 50, 50));
 
         styleSystem = new SimpleAttributeSet();
         StyleConstants.setItalic(styleSystem, true);
-        StyleConstants.setForeground(styleSystem, Color.GRAY); // Abu-abu (Info/File)
+        StyleConstants.setForeground(styleSystem, Color.GRAY);
 
         JScrollPane scrollPane = new JScrollPane(chatPane);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
 
-        // Input Panel
         JPanel inputPanel = new JPanel(new BorderLayout(5, 0));
         messageField = new JTextField();
         messageField.addActionListener(new SendMessageListener());
 
-        // Button Panel
         JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0));
         
-        // Tombol dengan Ikon Unicode
         JButton sendButton = new JButton("Kirim \u27A4"); 
         sendButton.addActionListener(new SendMessageListener());
         
@@ -113,7 +105,6 @@ public class PrivateChatWindow extends JFrame {
 
         add(mainPanel);
 
-        // Window listener untuk reset unread count
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowActivated(WindowEvent e) {
@@ -127,49 +118,37 @@ public class PrivateChatWindow extends JFrame {
         });
     }
 
-    /**
-     * Method ini sekarang pintar mendeteksi siapa pengirimnya
-     * berdasarkan format teks "Nama: Pesan"
-     */
     public void appendMessage(String rawMessage) {
         SwingUtilities.invokeLater(() -> {
             try {
                 String time = LocalTime.now().format(timeFormatter);
-                
-                // Insert Timestamp [HH:mm:ss]
                 chatDocument.insertString(chatDocument.getLength(), "[" + time + "] ", styleSystem);
 
-                // Logika Parsing Pesan
-                // Cek apakah pesan formatnya "Sender: Content"
                 String senderName = null;
                 String content = rawMessage;
-                SimpleAttributeSet nameStyle = styleSystem; // Default
+                SimpleAttributeSet nameStyle = styleSystem;
                 
                 if (rawMessage.startsWith("You:")) {
                     senderName = "You:";
-                    content = rawMessage.substring(4); // Hapus "You:"
+                    content = rawMessage.substring(4); 
                     nameStyle = styleSelf;
                 } else if (rawMessage.startsWith(targetUsername + ":")) {
                     senderName = targetUsername + ":";
                     content = rawMessage.substring(targetUsername.length() + 1);
                     nameStyle = styleTarget;
                 } else {
-                    // Pesan sistem atau info file transfer
                     nameStyle = styleSystem;
                 }
 
                 if (senderName != null && nameStyle != styleSystem) {
-                    // Jika ini pesan chat biasa (ada pengirimnya)
                     chatDocument.insertString(chatDocument.getLength(), senderName, nameStyle);
                     chatDocument.insertString(chatDocument.getLength(), content + "\n", styleMessage);
                 } else {
-                    // Jika ini pesan sistem/file
                     chatDocument.insertString(chatDocument.getLength(), rawMessage + "\n", styleSystem);
                 }
 
                 chatPane.setCaretPosition(chatDocument.getLength());
 
-                // Tambah unread count jika window tidak fokus
                 if (!isFocused()) {
                     unreadCount++;
                     updateTitle();
@@ -197,19 +176,13 @@ public class PrivateChatWindow extends JFrame {
         return targetUsername;
     }
 
-    // Send Message Listener
     private class SendMessageListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             String message = messageField.getText().trim();
-            if (message.isEmpty()) {
-                return;
-            }
+            if (message.isEmpty()) return;
 
-            // Kirim ke server melalui parent client
             parentClient.sendPrivateMessage(targetUsername, message);
-            
-            // Tampilkan di window sendiri dengan prefix "You:" agar terdeteksi oleh parser
             appendMessage("You: " + message);
             
             messageField.setText("");
@@ -217,21 +190,15 @@ public class PrivateChatWindow extends JFrame {
         }
     }
 
-    // Send File Listener
     private class SendFileListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             JFileChooser fileChooser = new JFileChooser();
-            // Tampilkan dialog di tengah window ini
             int result = fileChooser.showOpenDialog(PrivateChatWindow.this);
 
             if (result == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
-                
-                // Pesan sistem lokal
                 appendMessage("Mengirim file: " + selectedFile.getName() + "...");
-                
-                // Kirim file private melalui parent client (di thread terpisah)
                 new Thread(() -> {
                     parentClient.sendPrivateFile(targetUsername, selectedFile);
                 }).start();

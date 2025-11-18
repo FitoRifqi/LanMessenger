@@ -1,19 +1,14 @@
 package projek.lanmessanger;
 
-// Import untuk Look and Feel Modern
 import com.formdev.flatlaf.FlatLightLaf;
 
-// Import Swing standar
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Frame;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Rectangle;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
@@ -50,19 +45,15 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
-
-// Import untuk JTextPane (menggantikan JTextArea)
-import javax.swing.JTextPane;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
-
 public class ChatClient {
-    // Diganti dari JTextArea ke JTextPane
     private JTextPane incomingMessages;
     private JTextField outgoingMessage;
     
@@ -73,7 +64,6 @@ public class ChatClient {
     private JFrame frame; 
     
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
     private TrayIcon trayIcon;
     
     // Reply feature
@@ -86,7 +76,7 @@ public class ChatClient {
     private JList<String> userList;
     private HashMap<String, PrivateChatWindow> privateChatWindows;
 
-    // Variabel baru untuk styling JTextPane
+    // Styling
     private StyledDocument chatDocument;
     private SimpleAttributeSet styleSender;
     private SimpleAttributeSet styleMessage;
@@ -94,9 +84,7 @@ public class ChatClient {
     private SimpleAttributeSet styleError;
 
     public static void main(String[] args) {
-        // Terapkan FlatLaf Look and Feel
         FlatLightLaf.setup(); 
-        
         SwingUtilities.invokeLater(() -> new ChatClient().go());
     }
 
@@ -126,12 +114,7 @@ public class ChatClient {
                 System.exit(0); 
             }
             if (username.trim().isEmpty()) { 
-                JOptionPane.showMessageDialog(
-                        null, 
-                        "Nama tidak boleh kosong.", 
-                        "Error", 
-                        JOptionPane.WARNING_MESSAGE
-                );
+                JOptionPane.showMessageDialog(null, "Nama tidak boleh kosong.", "Error", JOptionPane.WARNING_MESSAGE);
             }
         }
     }
@@ -139,25 +122,22 @@ public class ChatClient {
     private void initUI() {
         frame = new JFrame("Simple LAN Messenger - (" + username + ")");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        // frame.setResizable(false); // Sebaiknya biarkan resizable dengan FlatLaf
         
         // Main panel
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10)); // Beri jarak lebih
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         // LEFT SIDE: User list
         JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
-        leftPanel.setPreferredSize(new Dimension(180, 0)); // Sedikit lebih lebar
+        leftPanel.setPreferredSize(new Dimension(180, 0));
         
         JLabel userListLabel = new JLabel("Pengguna Online");
         userListLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 0));
         
         userListModel = new DefaultListModel<>();
         userList = new JList<>(userListModel);
-        // Terapkan Renderer kustom
         userList.setCellRenderer(new UserListRenderer());
         
-        // Double click to open private chat
         userList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -174,7 +154,7 @@ public class ChatClient {
         });
         
         JScrollPane userListScroll = new JScrollPane(userList);
-        userListScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200))); // Border lebih lembut
+        userListScroll.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
         
         JButton privateChatBtn = new JButton("Private Chat");
         privateChatBtn.addActionListener(e -> {
@@ -193,18 +173,17 @@ public class ChatClient {
         // RIGHT SIDE: Chat area
         JPanel rightPanel = new JPanel(new BorderLayout(5, 5));
         
-        // Inisialisasi JTextPane
         incomingMessages = new JTextPane();
         incomingMessages.setEditable(false);
         chatDocument = incomingMessages.getStyledDocument();
         
-        // Definisikan style untuk chat
+        // Styles
         styleSender = new SimpleAttributeSet();
         StyleConstants.setBold(styleSender, true);
-        StyleConstants.setForeground(styleSender, new Color(0, 102, 204)); // Biru tua
+        StyleConstants.setForeground(styleSender, new Color(0, 102, 204));
 
         styleMessage = new SimpleAttributeSet();
-        StyleConstants.setForeground(styleMessage, new Color(50, 50, 50)); // Abu-abu tua
+        StyleConstants.setForeground(styleMessage, new Color(50, 50, 50));
 
         styleSystem = new SimpleAttributeSet();
         StyleConstants.setItalic(styleSystem, true);
@@ -214,32 +193,24 @@ public class ChatClient {
         StyleConstants.setBold(styleError, true);
         StyleConstants.setForeground(styleError, Color.RED);
         
-        // Reply feature: mouse listener
         incomingMessages.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    showPopupMenu(e);
-                }
+                if (e.isPopupTrigger()) showPopupMenu(e);
             }
-            
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    showPopupMenu(e);
-                }
+                if (e.isPopupTrigger()) showPopupMenu(e);
             }
             
             private void showPopupMenu(MouseEvent e) {
                 try {
-                    // Logika untuk mendapatkan teks dari JTextPane sedikit berbeda
                     int offset = incomingMessages.viewToModel2D(e.getPoint());
                     int start = incomingMessages.getStyledDocument().getParagraphElement(offset).getStartOffset();
                     int end = incomingMessages.getStyledDocument().getParagraphElement(offset).getEndOffset();
                     
                     String clickedLine = incomingMessages.getText(start, end - start).trim();
                     
-                    // Filter pesan sistem/file
                     if (!clickedLine.isEmpty() &&
                         !clickedLine.contains("telah bergabung") && 
                         !clickedLine.contains("telah keluar") && 
@@ -251,25 +222,20 @@ public class ChatClient {
                         
                         JPopupMenu popup = new JPopupMenu();
                         JMenuItem replyItem = new JMenuItem("Reply");
-                        
-                        // Hapus timestamp [HH:mm:ss] dari pesan
                         String messageToReply = clickedLine.substring(clickedLine.indexOf("]") + 2);
                         
                         replyItem.addActionListener(ev -> setReplyTo(messageToReply));
-                        
                         popup.add(replyItem);
                         popup.show(e.getComponent(), e.getX(), e.getY());
                     }
-                } catch (Exception ex) {
-                     // ex.printStackTrace(); // Abaikan jika klik di area kosong
-                }
+                } catch (Exception ex) {}
             }
         });
         
         JScrollPane qScroller = new JScrollPane(incomingMessages);
         qScroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         qScroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        qScroller.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200))); // Border lebih lembut
+        qScroller.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
         
         // Reply panel
         replyPanel = new JPanel(new BorderLayout(5, 0));
@@ -293,12 +259,10 @@ public class ChatClient {
         outgoingMessage.addActionListener(new SendButtonListener());
 
         JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 5, 0)); 
-        
-        // Tombol dengan Ikon Unicode
-        JButton sendButton = new JButton("Kirim \u27A4"); // Panah
+        JButton sendButton = new JButton("Kirim \u27A4");
         sendButton.addActionListener(new SendButtonListener());
         
-        JButton sendFileButton = new JButton("File \uD83D\uDCCE"); // Paperclip
+        JButton sendFileButton = new JButton("File \uD83D\uDCCE");
         sendFileButton.addActionListener(new SendFileButtonListener());
         
         buttonPanel.add(sendButton);
@@ -314,20 +278,17 @@ public class ChatClient {
         rightPanel.add(qScroller, BorderLayout.CENTER);
         rightPanel.add(bottomPanel, BorderLayout.SOUTH);
         
-        // Split pane
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
         splitPane.setDividerLocation(180);
-        splitPane.setResizeWeight(0.1); // Biarkan user list sedikit resize
+        splitPane.setResizeWeight(0.1);
         splitPane.setBorder(null);
         
         mainPanel.add(splitPane, BorderLayout.CENTER);
         frame.add(mainPanel);
 
         frame.pack(); 
-        frame.setMinimumSize(new Dimension(600, 400)); // Set ukuran minimum
-        frame.setSize(800, 600); // Set ukuran default yang lebih besar
-        
-        // Pindahkan ke tengah layar
+        frame.setMinimumSize(new Dimension(600, 400));
+        frame.setSize(800, 600);
         frame.setLocationRelativeTo(null);
     }
     
@@ -344,31 +305,24 @@ public class ChatClient {
         replyPanel.setVisible(true);
         outgoingMessage.requestFocus();
         
-        // Perlu pack ulang untuk menampilkan panel
         frame.validate();
         frame.repaint();
     }
     
     private String cleanReplyChain(String message) {
         int lastReplyIndex = message.lastIndexOf("[↩");
-        
-        if (lastReplyIndex == -1) {
-            return message;
-        }
+        if (lastReplyIndex == -1) return message;
         
         int endReplyIndex = message.indexOf("]:", lastReplyIndex);
-        
         if (endReplyIndex != -1 && endReplyIndex + 2 < message.length()) {
             return message.substring(endReplyIndex + 2).trim();
         }
-        
         return message;
     }
     
     private void cancelReply() {
         replyingToMessage = null;
         replyPanel.setVisible(false);
-        // Perlu pack ulang untuk menyembunyikan panel
         frame.validate();
         frame.repaint();
     }
@@ -389,7 +343,7 @@ public class ChatClient {
     
     public void sendPrivateMessage(String target, String message) {
         try {
-            dataOut.writeInt(3); // Type 3: Private message
+            dataOut.writeInt(3); 
             dataOut.writeUTF(target);
             dataOut.writeUTF(message);
             dataOut.flush();
@@ -401,7 +355,7 @@ public class ChatClient {
     
     public void sendPrivateFile(String target, File file) {
         try {
-            dataOut.writeInt(6); // Type 6: Private file
+            dataOut.writeInt(6);
             dataOut.writeUTF(target);
             dataOut.writeUTF(file.getName());
             dataOut.writeLong(file.length());
@@ -409,11 +363,9 @@ public class ChatClient {
             FileInputStream fis = new FileInputStream(file);
             byte[] buffer = new byte[4096];
             int read;
-            
             while ((read = fis.read(buffer)) > 0) {
                 dataOut.write(buffer, 0, read);
             }
-            
             fis.close();
             dataOut.flush();
             
@@ -421,7 +373,6 @@ public class ChatClient {
             if (window != null) {
                 window.appendMessage("File " + file.getName() + " berhasil terkirim.");
             }
-            
         } catch (IOException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(frame, "Gagal mengirim file!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -449,21 +400,16 @@ public class ChatClient {
 
         try {
             SystemTray tray = SystemTray.getSystemTray();
-            // Path image/yuta.png harus benar relatif dari
-            // lokasi eksekusi
             Image image = new ImageIcon("image/yuta.png").getImage(); 
-            
             trayIcon = new TrayIcon(image, "LAN Messenger");
             trayIcon.setImageAutoSize(true);
             trayIcon.setToolTip("LAN Messenger (" + username + ")");
-            
             tray.add(trayIcon);
             
             trayIcon.addActionListener(e -> {
                 frame.setVisible(true);
                 frame.setState(Frame.NORMAL);
             });
-
         } catch (Exception e) {
             System.out.println("Gagal membuat TrayIcon: " + e.getMessage());
             trayIcon = null;
@@ -478,16 +424,14 @@ public class ChatClient {
 
     private void setupNetworking() {
         try {
-            // TODO: Ganti IP ini ke IP server Anda
+            // Gunakan IP server yang sesuai
             Socket sock = new Socket("192.168.18.62", 5000);
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
             System.out.println("Koneksi berhasil dibuat.");
             
-            // Send username to server
             dataOut.writeUTF(username);
             dataOut.flush();
-            
         } catch (IOException e) {
             e.printStackTrace();
             SwingUtilities.invokeLater(() -> 
@@ -500,22 +444,14 @@ public class ChatClient {
     public class SendButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             String message = outgoingMessage.getText().trim();
-            if (message.isEmpty()) {
-                return;
-            }
+            if (message.isEmpty()) return;
             
             try {
                 String fullMessage;
-                
                 if (replyingToMessage != null) {
                     String replyPreview = replyingToMessage;
-                    if (replyPreview.length() > 40) {
-                        replyPreview = replyPreview.substring(0, 40) + "...";
-                    }
-                    // Hapus format nama "User:" dari reply preview jika ada
-                    if(replyPreview.contains(":")) {
-                        replyPreview = replyPreview.substring(replyPreview.indexOf(":") + 1).trim();
-                    }
+                    if (replyPreview.length() > 40) replyPreview = replyPreview.substring(0, 40) + "...";
+                    if(replyPreview.contains(":")) replyPreview = replyPreview.substring(replyPreview.indexOf(":") + 1).trim();
                     
                     fullMessage = username + " [↩ " + replyPreview + "]: " + message;
                     cancelReply();
@@ -556,16 +492,12 @@ public class ChatClient {
                 FileInputStream fis = new FileInputStream(selectedFile);
                 byte[] buffer = new byte[4096];
                 int read;
-
                 while ((read = fis.read(buffer)) > 0) {
                     dataOut.write(buffer, 0, read);
                 }
-                
                 fis.close();
                 dataOut.flush();
-
                 appendSystemMessage("File " + selectedFile.getName() + " berhasil terkirim.");
-
             } catch (IOException e) {
                 e.printStackTrace();
                 appendErrorMessage("Gagal mengirim file: " + e.getMessage());
@@ -591,31 +523,25 @@ public class ChatClient {
                         if (message.contains(":")) {
                             try {
                                 int separatorIndex = message.indexOf(":");
-                                sender = message.substring(0, separatorIndex + 1); // e.g., "Fitor:"
-                                content = message.substring(separatorIndex + 1);    // e.g., " Halo"
+                                sender = message.substring(0, separatorIndex + 1); 
+                                content = message.substring(separatorIndex + 1);    
                             } catch (Exception e) {
-                                // Jika format salah, tampilkan sebagai pesan sistem
                                 sender = null;
                                 content = message;
                                 senderStyle = styleSystem;
                                 contentStyle = styleSystem;
                             }
                         } else {
-                            // Pesan sistem (e.g., "--- User joined ---")
                             senderStyle = styleSystem;
                             contentStyle = styleSystem;
                         }
                         
-                        // Cek apakah pengirim adalah diri sendiri
                         if (sender != null && sender.startsWith(username + ":")) {
-                             StyleConstants.setForeground(senderStyle, new Color(0, 130, 0)); // Warna hijau untuk diri sendiri
+                             StyleConstants.setForeground(senderStyle, new Color(0, 130, 0));
                         }
 
                         appendMessage(time, sender, content, senderStyle, contentStyle);
-                        
-                        if (!frame.isFocused()) {
-                            showNotification("Pesan Baru", message);
-                        }
+                        if (!frame.isFocused()) showNotification("Pesan Baru", message);
                     
                     } else if (messageType == 2) { // Broadcast file
                         handleIncomingFile();
@@ -637,10 +563,10 @@ public class ChatClient {
                         String sender = dataIn.readUTF();
                         handlePrivateFile(sender);
                         
-                    } else if (messageType == 99) { // Error from server
+                    } else if (messageType == 99) { // Error
                         String errorMsg = dataIn.readUTF();
                         JOptionPane.showMessageDialog(frame, "Error dari server: " + errorMsg, "Koneksi Gagal", JOptionPane.ERROR_MESSAGE);
-                        System.exit(0); // Tutup klien jika username ditolak
+                        System.exit(0);
                     }
                 }
             } catch (EOFException | SocketException e) {
@@ -652,7 +578,6 @@ public class ChatClient {
         }
         
         private void handlePrivateMessage(String sender, String message) {
-            // Open or get existing window
             if (!privateChatWindows.containsKey(sender)) {
                 SwingUtilities.invokeLater(() -> openPrivateChat(sender));
             }
@@ -660,11 +585,7 @@ public class ChatClient {
             PrivateChatWindow window = privateChatWindows.get(sender);
             if (window != null) {
                 window.appendMessage(sender + ": " + message);
-                
-                // Show notification if window not focused
-                if (!window.isFocused()) {
-                    showNotification("Private Message from " + sender, message);
-                }
+                if (!window.isFocused()) showNotification("Private Message from " + sender, message);
             }
         }
         
@@ -672,7 +593,6 @@ public class ChatClient {
             String fileName = dataIn.readUTF();
             long fileSize = dataIn.readLong();
             
-            // Open or get existing window
             if (!privateChatWindows.containsKey(sender)) {
                 SwingUtilities.invokeLater(() -> openPrivateChat(sender));
             }
@@ -681,26 +601,18 @@ public class ChatClient {
             if (window != null) {
                 String fileInfo = "Receiving file: " + fileName + " (" + (fileSize / 1024) + " KB)";
                 window.appendMessage(fileInfo);
-                
-                if (!window.isFocused()) {
-                    showNotification("Private File from " + sender, fileInfo);
-                }
+                if (!window.isFocused()) showNotification("Private File from " + sender, fileInfo);
             }
             
-            // Save file dialog
             JFileChooser saveChooser = new JFileChooser();
             File saveDir = new File("Files");
-            if (!saveDir.exists()) {
-                saveDir.mkdir(); 
-            }
+            if (!saveDir.exists()) saveDir.mkdir(); 
             saveChooser.setCurrentDirectory(saveDir.getAbsoluteFile());
             saveChooser.setSelectedFile(new File(fileName)); 
             
             final File[] saveFile = new File[1]; 
             try {
                 SwingUtilities.invokeAndWait(() -> {
-                    // Tampilkan dialog save di atas private window jika ada, jika tidak
-                    // di atas main frame
                     Component parent = (window != null) ? window : frame;
                     int saveResult = saveChooser.showSaveDialog(parent);
                     if (saveResult == JFileChooser.APPROVE_OPTION) {
@@ -717,34 +629,24 @@ public class ChatClient {
             OutputStream fos = null;
             if (saveFile[0] != null) {
                 fos = new FileOutputStream(saveFile[0]);
-                if (window != null) {
-                    window.appendMessage("Saving to: " + saveFile[0].getAbsolutePath() + "...");
-                }
+                if (window != null) window.appendMessage("Saving to: " + saveFile[0].getAbsolutePath() + "...");
             } else {
-                if (window != null) {
-                    window.appendMessage("File save cancelled. Discarding data...");
-                }
+                if (window != null) window.appendMessage("File save cancelled. Discarding data...");
             }
             
             byte[] buffer = new byte[4096];
             int read;
             long remaining = fileSize;
             while (remaining > 0 && (read = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) > 0) {
-                if (fos != null) { 
-                    fos.write(buffer, 0, read);
-                }
+                if (fos != null) fos.write(buffer, 0, read);
                 remaining -= read;
             }
 
             if (fos != null) {
                 fos.close();
-                if (window != null) {
-                    window.appendMessage("File " + saveFile[0].getName() + " saved successfully.");
-                }
+                if (window != null) window.appendMessage("File " + saveFile[0].getName() + " saved successfully.");
             } else {
-                if (window != null) {
-                    window.appendMessage("File " + fileName + " discarded.");
-                }
+                if (window != null) window.appendMessage("File " + fileName + " discarded.");
             }
         }
         
@@ -755,15 +657,11 @@ public class ChatClient {
             String fileInfo = "Menerima file: " + fileName + " (" + (fileSize / 1024) + " KB).";
             appendSystemMessage(fileInfo);
             
-            if (!frame.isFocused()) {
-                showNotification("File Baru", fileInfo);
-            }
+            if (!frame.isFocused()) showNotification("File Baru", fileInfo);
             
             JFileChooser saveChooser = new JFileChooser();
             File saveDir = new File("Files");
-            if (!saveDir.exists()) {
-                saveDir.mkdir(); 
-            }
+            if (!saveDir.exists()) saveDir.mkdir(); 
             saveChooser.setCurrentDirectory(saveDir.getAbsoluteFile());
             saveChooser.setSelectedFile(new File(fileName)); 
             
@@ -794,9 +692,7 @@ public class ChatClient {
             int read;
             long remaining = fileSize;
             while (remaining > 0 && (read = dataIn.read(buffer, 0, (int) Math.min(buffer.length, remaining))) > 0) {
-                if (fos != null) { 
-                    fos.write(buffer, 0, read);
-                }
+                if (fos != null) fos.write(buffer, 0, read);
                 remaining -= read;
             }
 
@@ -809,23 +705,14 @@ public class ChatClient {
         }
     }
     
-    /**
-     * Helper method untuk menambahkan pesan ke JTextPane dengan styling.
-     */
     private void appendMessage(String time, String sender, String message, SimpleAttributeSet senderStyle, SimpleAttributeSet messageStyle) {
         SwingUtilities.invokeLater(() -> {
             try {
-                // Tambahkan waktu
                 chatDocument.insertString(chatDocument.getLength(), "[" + time + "] ", styleSystem);
-                
-                // Tambahkan pengirim (jika ada)
                 if (sender != null && !sender.isEmpty()) {
                     chatDocument.insertString(chatDocument.getLength(), sender, senderStyle);
                 }
-                
-                // Tambahkan pesan
                 chatDocument.insertString(chatDocument.getLength(), message + "\n", messageStyle);
-                
                 incomingMessages.setCaretPosition(chatDocument.getLength());
             } catch (Exception e) {
                 e.printStackTrace();
@@ -833,63 +720,36 @@ public class ChatClient {
         });
     }
     
-    /**
-     * Helper untuk pesan sistem (info, file transfer)
-     */
     private void appendSystemMessage(String message) {
         String time = LocalTime.now().format(timeFormatter);
         appendMessage(time, null, message, styleSystem, styleSystem);
     }
     
-    /**
-     * Helper untuk pesan error
-     */
     private void appendErrorMessage(String message) {
         String time = LocalTime.now().format(timeFormatter);
         appendMessage(time, "[ERROR] ", message, styleError, styleError);
     }
     
-    
-    // INNER CLASS: UserListRenderer
-    /**
-     * Renderer kustom untuk JList agar terlihat lebih baik.
-     * Menambahkan padding dan membedakan user sendiri.
-     */
     class UserListRenderer extends DefaultListCellRenderer {
-        
-        private Color onlineColor = new Color(0, 140, 0); // Hijau
-        private Color selfColor = new Color(0, 102, 204); // Biru
-        private EmptyBorder padding = new EmptyBorder(5, 7, 5, 7); // Padding
+        private Color onlineColor = new Color(0, 140, 0); 
+        private Color selfColor = new Color(0, 102, 204); 
+        private EmptyBorder padding = new EmptyBorder(5, 7, 5, 7); 
 
         @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value,
-                int index, boolean isSelected, boolean cellHasFocus) {
-            
-            // Panggil implementasi default
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            
             String usernameValue = (String) value;
-            
-            // Set padding
             setBorder(padding);
+            setText("\u25CF " + usernameValue); 
             
-            // Set ikon (Anda bisa gunakan unicode atau ikon file)
-            setText("\u25CF " + usernameValue); // Unicode lingkaran
-            
-            // Membuat nama user sendiri terlihat berbeda
             if (usernameValue.equals(ChatClient.this.username)) {
                 setText("\u25CF " + usernameValue + " (Anda)");
                 setForeground(selfColor);
-                if (!isSelected) {
-                     setBackground(new Color(240, 245, 255)); // Latar belakang biru muda
-                }
+                if (!isSelected) setBackground(new Color(240, 245, 255));
             } else {
                  setForeground(onlineColor);
-                 if (!isSelected) {
-                     setBackground(Color.WHITE); // Latar belakang standar
-                 }
+                 if (!isSelected) setBackground(Color.WHITE);
             }
-
             return c;
         }
     }
