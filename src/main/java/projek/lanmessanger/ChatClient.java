@@ -341,11 +341,14 @@ public class ChatClient {
         }
     }
     
+    // SECURITY: Enkripsi pesan private sebelum dikirim
     public void sendPrivateMessage(String target, String message) {
         try {
+            String encryptedMessage = CryptoUtil.encrypt(message);
+            
             dataOut.writeInt(3); 
             dataOut.writeUTF(target);
-            dataOut.writeUTF(message);
+            dataOut.writeUTF(encryptedMessage); // Kirim pesan terenkripsi
             dataOut.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -425,7 +428,7 @@ public class ChatClient {
     private void setupNetworking() {
         try {
             // Gunakan IP server yang sesuai
-            Socket sock = new Socket("192.168.18.62", 5000);
+            Socket sock = new Socket("192.168.18.111", 5000);
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
             System.out.println("Koneksi berhasil dibuat.");
@@ -459,8 +462,11 @@ public class ChatClient {
                     fullMessage = username + ": " + message;
                 }
                 
+                // SECURITY: Enkripsi pesan broadcast sebelum dikirim
+                String encryptedMessage = CryptoUtil.encrypt(fullMessage);
+
                 dataOut.writeInt(1);
-                dataOut.writeUTF(fullMessage);
+                dataOut.writeUTF(encryptedMessage); // Kirim pesan terenkripsi
                 dataOut.flush();
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -514,7 +520,12 @@ public class ChatClient {
                     String time = LocalTime.now().format(timeFormatter);
 
                     if (messageType == 1) { // Broadcast text
-                        String message = dataIn.readUTF();
+                        String encryptedMessage = dataIn.readUTF();
+                        
+                        // SECURITY: Dekripsi pesan broadcast
+                        String message = CryptoUtil.decrypt(encryptedMessage);
+                        if (message == null) message = encryptedMessage; // Fallback jika gagal
+
                         String sender = null;
                         String content = message;
                         SimpleAttributeSet senderStyle = styleSender;
@@ -548,7 +559,12 @@ public class ChatClient {
                         
                     } else if (messageType == 3) { // Private message
                         String sender = dataIn.readUTF();
-                        String message = dataIn.readUTF();
+                        String encryptedMessage = dataIn.readUTF();
+                        
+                        // SECURITY: Dekripsi pesan private
+                        String message = CryptoUtil.decrypt(encryptedMessage);
+                        if (message == null) message = encryptedMessage;
+                        
                         handlePrivateMessage(sender, message);
                         
                     } else if (messageType == 4) { // User list update
