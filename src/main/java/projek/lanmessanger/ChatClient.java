@@ -63,6 +63,11 @@ public class ChatClient {
     private String username;
     private JFrame frame; 
     
+    // --- MODIFIKASI: Variabel untuk IP dan Port ---
+    private String serverIP = ""; 
+    private int serverPort = 5000;         
+    // ----------------------------------------------
+
     private DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     private TrayIcon trayIcon;
     
@@ -91,6 +96,11 @@ public class ChatClient {
     public void go() {
         privateChatWindows = new HashMap<>();
         promptForUsername();
+        
+        // --- MODIFIKASI: Panggil dialog konfigurasi server ---
+        promptForServerConfig();
+        // -----------------------------------------------------
+
         initUI();
         initSystemTray();
         setupNetworking();
@@ -118,6 +128,42 @@ public class ChatClient {
             }
         }
     }
+    
+    // --- MODIFIKASI: Method baru untuk input IP & Port ---
+    private void promptForServerConfig() {
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        
+        // Default value bisa disesuaikan
+        JTextField ipField = new JTextField(serverIP); 
+        JTextField portField = new JTextField(String.valueOf(serverPort));
+        
+        panel.add(new JLabel("Server IP Address:"));
+        panel.add(ipField);
+        panel.add(new JLabel("Server Port:"));
+        panel.add(portField);
+        
+        int result = JOptionPane.showConfirmDialog(null, panel, 
+                "Konfigurasi Server", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+                
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String ipInput = ipField.getText().trim();
+                if (!ipInput.isEmpty()) {
+                    this.serverIP = ipInput;
+                }
+                
+                String portInput = portField.getText().trim();
+                if (!portInput.isEmpty()) {
+                    this.serverPort = Integer.parseInt(portInput);
+                }
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Port harus berupa angka! Menggunakan default port " + serverPort, "Warning", JOptionPane.WARNING_MESSAGE);
+            }
+        } else {
+            System.exit(0); 
+        }
+    }
+    // -----------------------------------------------------
 
     private void initUI() {
         frame = new JFrame("Simple LAN Messenger - (" + username + ")");
@@ -403,6 +449,7 @@ public class ChatClient {
 
         try {
             SystemTray tray = SystemTray.getSystemTray();
+            // Pastikan path image ini benar atau gunakan resource loader
             Image image = new ImageIcon("image/yuta.png").getImage(); 
             trayIcon = new TrayIcon(image, "LAN Messenger");
             trayIcon.setImageAutoSize(true);
@@ -427,8 +474,11 @@ public class ChatClient {
 
     private void setupNetworking() {
         try {
-            // Gunakan IP server yang sesuai
-            Socket sock = new Socket("192.168.18.111", 5000);
+            // --- MODIFIKASI: Gunakan variabel serverIP dan serverPort ---
+            System.out.println("Mencoba terhubung ke " + serverIP + ":" + serverPort);
+            Socket sock = new Socket(serverIP, serverPort);
+            // ------------------------------------------------------------
+            
             dataIn = new DataInputStream(sock.getInputStream());
             dataOut = new DataOutputStream(sock.getOutputStream());
             System.out.println("Koneksi berhasil dibuat.");
@@ -438,7 +488,7 @@ public class ChatClient {
         } catch (IOException e) {
             e.printStackTrace();
             SwingUtilities.invokeLater(() -> 
-                JOptionPane.showMessageDialog(null, "Gagal terhubung ke server: " + e.getMessage(), "Koneksi Gagal", JOptionPane.ERROR_MESSAGE)
+                JOptionPane.showMessageDialog(null, "Gagal terhubung ke server (" + serverIP + ":" + serverPort + ")\n" + e.getMessage(), "Koneksi Gagal", JOptionPane.ERROR_MESSAGE)
             );
             System.exit(1);
         }
