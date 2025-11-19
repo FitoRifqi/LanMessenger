@@ -56,7 +56,6 @@ public class ChatClient implements ClientListener {
     private void initNetwork() {
         try {
             System.out.println("Menghubungkan ke " + serverIP + ":" + serverPort);
-            // Inisialisasi NetworkClient dengan 'this' sebagai Listener
             networkClient = new NetworkClient(serverIP, serverPort, username, this);
             appendSystemMessage("Terhubung ke server.");
         } catch (Exception e) {
@@ -65,26 +64,23 @@ public class ChatClient implements ClientListener {
         }
     }
 
-    // --- IMPLEMENTASI ClientListener (Callback dari NetworkClient) ---
+    // --- IMPLEMENTASI ClientListener ---
     
     @Override
     public void onMessageReceived(String sender, String message, boolean isPrivate) {
         if (isPrivate) {
             handlePrivateIncoming(sender, message);
         } else {
-            // Broadcast message logic
             SwingUtilities.invokeLater(() -> {
                 SimpleAttributeSet sStyle = styleSender;
                 SimpleAttributeSet mStyle = styleMessage;
 
-                // Cek apakah pesan dari diri sendiri (untuk pewarnaan hijau)
                 if (sender != null && sender.startsWith(username)) {
                      StyleConstants.setForeground(sStyle, new Color(0, 130, 0));
                 } else {
-                     StyleConstants.setForeground(styleSender, new Color(0, 102, 204)); // Reset warna default
+                     StyleConstants.setForeground(styleSender, new Color(0, 102, 204)); 
                 }
                 
-                // Jika formatnya sistem (tanpa sender jelas)
                 if (sender == null) {
                     sStyle = styleSystem;
                     mStyle = styleSystem;
@@ -120,14 +116,11 @@ public class ChatClient implements ClientListener {
     
     @Override
     public File onFileReceiveRequest(String fileName, long fileSize, String sender) {
-        // Method ini dipanggil oleh Network Thread, kita pakai invokeAndWait untuk GUI blocking
         final File[] selectedFile = new File[1];
-        
         try {
             SwingUtilities.invokeAndWait(() -> {
                 String msg = (sender == null ? "Broadcast" : sender) + " mengirim file: " + fileName + " (" + (fileSize/1024) + " KB)";
                 
-                // Jika private, tampilkan info di window private
                 if (sender != null && privateChatWindows.containsKey(sender)) {
                     privateChatWindows.get(sender).appendMessage("Receiving file: " + fileName);
                 } else {
@@ -157,17 +150,19 @@ public class ChatClient implements ClientListener {
         appendSystemMessage("File " + file.getName() + " berhasil disimpan.");
     }
 
-    // --- Helper Method untuk Private Chat (Agar kompatibel dengan PrivateChatWindow.java) ---
+    // --- Helper Method Private Chat ---
 
     private void handlePrivateIncoming(String sender, String message) {
-        if (!privateChatWindows.containsKey(sender)) {
-            SwingUtilities.invokeLater(() -> openPrivateChat(sender));
-        }
-        PrivateChatWindow window = privateChatWindows.get(sender);
-        if (window != null) {
-            window.appendMessage(sender + ": " + message);
-            if (!window.isFocused()) showNotification("Private Msg: " + sender, message);
-        }
+        SwingUtilities.invokeLater(() -> {
+            if (!privateChatWindows.containsKey(sender)) {
+                openPrivateChat(sender);
+            }
+            PrivateChatWindow window = privateChatWindows.get(sender);
+            if (window != null) {
+                window.appendMessage(sender + ": " + message);
+                if (!window.isFocused()) showNotification("Private Msg: " + sender, message);
+            }
+        });
     }
 
     public void sendPrivateMessage(String target, String message) {
@@ -176,7 +171,6 @@ public class ChatClient implements ClientListener {
 
     public void sendPrivateFile(String target, File file) {
         networkClient.sendFile(file, target);
-        // Update UI Private Window
         PrivateChatWindow window = privateChatWindows.get(target);
         if (window != null) {
             window.appendMessage("File " + file.getName() + " dikirim.");
@@ -199,23 +193,17 @@ public class ChatClient implements ClientListener {
         }
     }
 
-    // --- GUI & Setup Methods (Sama seperti sebelumnya, tapi dirapikan) ---
+    // --- GUI Setup ---
 
     private void initUI() {
         frame = new JFrame("LAN Messenger - (" + username + ")");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
-        // Styles Setup
         initStyles();
 
-        // Layout Utama
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Left Panel (User List)
         JPanel leftPanel = createLeftPanel();
-        
-        // Right Panel (Chat Area)
         JPanel rightPanel = createRightPanel();
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
@@ -287,7 +275,6 @@ public class ChatClient implements ClientListener {
             public void mousePressed(MouseEvent e) { if(e.isPopupTrigger()) showPopup(e); }
         });
 
-        // Input Area
         outgoingMessage = new JTextField();
         outgoingMessage.addActionListener(e -> sendMessage());
         
@@ -306,10 +293,15 @@ public class ChatClient implements ClientListener {
 
         // Reply Panel
         replyPanel = new JPanel(new BorderLayout());
+        replyPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
         replyPanel.setVisible(false);
         replyLabel = new JLabel();
         JButton closeReply = new JButton("x");
-        closeReply.addActionListener(e -> { replyingToMessage = null; replyPanel.setVisible(false); });
+        closeReply.setFocusable(false);
+        closeReply.addActionListener(e -> cancelReply());
         replyPanel.add(replyLabel, BorderLayout.CENTER);
         replyPanel.add(closeReply, BorderLayout.EAST);
         
@@ -336,8 +328,7 @@ public class ChatClient implements ClientListener {
         networkClient.sendBroadcastMessage(fullMsg);
         
         outgoingMessage.setText("");
-        replyingToMessage = null;
-        replyPanel.setVisible(false);
+        cancelReply(); // Reset reply setelah kirim
     }
 
     private void sendFileAction() {
@@ -346,23 +337,85 @@ public class ChatClient implements ClientListener {
             File f = ch.getSelectedFile();
             appendSystemMessage("Mengirim file: " + f.getName() + "...");
             new Thread(() -> {
-                networkClient.sendFile(f, null); // null = broadcast
+                networkClient.sendFile(f, null);
                 appendSystemMessage("File terkirim.");
             }).start();
         }
     }
     
+    // --- LOGIKA POPUP REPLY (FIXED) ---
     private void showPopup(MouseEvent e) {
-        // (Logika popup menu reply disederhanakan disini, bisa dicopy dari kode lama jika butuh detail)
         JPopupMenu menu = new JPopupMenu();
-        JMenuItem item = new JMenuItem("Reply");
-        item.addActionListener(ev -> {
-            replyingToMessage = "Selected Text"; // Simplifikasi untuk demo
-            replyLabel.setText("Replying...");
-            replyPanel.setVisible(true);
+        JMenuItem replyItem = new JMenuItem("Reply");
+        
+        replyItem.addActionListener(ev -> {
+            try {
+                // 1. Cek blok manual
+                String selectedText = incomingMessages.getSelectedText();
+                
+                // 2. Jika tidak ada blok, ambil baris yang diklik
+                if (selectedText == null || selectedText.trim().isEmpty()) {
+                    int offset = incomingMessages.viewToModel(e.getPoint());
+                    if (offset >= 0) {
+                        Element root = chatDocument.getDefaultRootElement();
+                        int rowIndex = root.getElementIndex(offset);
+                        Element line = root.getElement(rowIndex);
+                        
+                        int start = line.getStartOffset();
+                        int end = line.getEndOffset();
+                        
+                        if (end > start) {
+                            // Ambil teks full satu baris
+                            selectedText = chatDocument.getText(start, end - start - 1);
+                        }
+                    }
+                }
+
+                // 3. Bersihkan timestamp dan set reply
+                if (selectedText != null && !selectedText.trim().isEmpty()) {
+                    // Hapus timestamp [HH:mm:ss] di awal
+                    String cleanText = selectedText.replaceAll("^\\[\\d{2}:\\d{2}:\\d{2}\\]\\s*", "").trim();
+                    setReplyTo(cleanText);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         });
-        menu.add(item);
+
+        menu.add(replyItem);
         menu.show(e.getComponent(), e.getX(), e.getY());
+    }
+    
+    private void setReplyTo(String message) {
+        String cleanedMessage = cleanReplyChain(message);
+        replyingToMessage = cleanedMessage;
+        
+        // Batasi panjang tampilan di label reply (tapi data asli tetap utuh di variabel)
+        String displayMessage = cleanedMessage;
+        if (displayMessage.length() > 50) {
+            displayMessage = displayMessage.substring(0, 50) + "...";
+        }
+        
+        replyLabel.setText("<html>Replying to: <i>" + displayMessage + "</i></html>");
+        replyPanel.setVisible(true);
+        outgoingMessage.requestFocus();
+    }
+    
+    // Mencegah reply berantai (replyception)
+    private String cleanReplyChain(String message) {
+        int lastReplyIndex = message.lastIndexOf("[↩");
+        if (lastReplyIndex == -1) return message;
+        
+        int endReplyIndex = message.indexOf("]:", lastReplyIndex);
+        if (endReplyIndex != -1 && endReplyIndex + 2 < message.length()) {
+            return message.substring(endReplyIndex + 2).trim();
+        }
+        return message;
+    }
+    
+    private void cancelReply() {
+        replyingToMessage = null;
+        replyPanel.setVisible(false);
     }
 
     private void appendMessage(String sender, String message, SimpleAttributeSet styleS, SimpleAttributeSet styleM) {
@@ -414,7 +467,6 @@ public class ChatClient implements ClientListener {
         }
     }
 
-    // Custom Renderer for User List
     class UserListRenderer extends DefaultListCellRenderer {
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
