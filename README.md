@@ -110,5 +110,5 @@ Didistribusikan di bawah Lisensi MIT. Lihat file `LICENSE` untuk informasi lebih
 
 ---
 <div align="center">
-  Dibuat dengan ❤️ oleh Fito Rifqi
+  Dibuat dengan Fans Nomor 1 Manchester United
 </div>
